@@ -1,6 +1,9 @@
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 # Crear clase principal para la aplicación
 class App:
@@ -8,7 +11,7 @@ class App:
         self.root = root
         self.root.title("App de Entrenamiento")
         self.root.geometry("800x600")
-        
+
         # Crear el menú principal
         menubar = tk.Menu(self.root)
         self.root.config(menu=menubar)
@@ -26,6 +29,9 @@ class App:
         self.frame_entradas = None
         self.frame_analisis = None
 
+        # Crear una variable para el DataFrame
+        self.df = pd.DataFrame()
+
         # Inicializar la app mostrando el dashboard
         self.mostrar_dashboard()
 
@@ -42,7 +48,31 @@ class App:
             self.frame_dashboard = tk.Frame(self.root)
             label = tk.Label(self.frame_dashboard, text="Dashboard - Aquí irán los gráficos", font=("Helvetica", 16))
             label.pack(pady=20)
+
+            # Placeholder para el gráfico de Seaborn
+            self.canvas = None
+
         self.cambiar_frame(self.frame_dashboard)
+
+        # Si ya se han cargado datos, generar el gráfico de pairplot
+        if not self.df.empty:
+            self.mostrar_pairplot()
+
+    # Función para mostrar el pairplot de Seaborn en el Dashboard
+    def mostrar_pairplot(self):
+        # Crear el gráfico de pairplot
+        fig = plt.figure(figsize=(8, 6))
+        sns.pairplot(self.df)
+        plt.tight_layout()
+
+        # Limpiar el gráfico anterior (si existe)
+        if self.canvas:
+            self.canvas.get_tk_widget().pack_forget()
+
+        # Incrustar el gráfico en el frame usando FigureCanvasTkAgg
+        self.canvas = FigureCanvasTkAgg(fig, master=self.frame_dashboard)
+        self.canvas.draw()
+        self.canvas.get_tk_widget().pack()
 
     # Función para mostrar la ventana de entradas (con tabla)
     def mostrar_entradas(self):
@@ -50,7 +80,7 @@ class App:
             self.frame_entradas = tk.Frame(self.root)
             label = tk.Label(self.frame_entradas, text="Entradas de Entrenamiento", font=("Helvetica", 16))
             label.pack(pady=20)
-            
+
             # Treeview para mostrar la tabla
             self.tree = ttk.Treeview(self.frame_entradas, columns=("Fecha", "Año", "Mes", "Hora", "Modalidad", "Categoría",
                                                                    "Tipo", "Objetivo", "Distancia", "Tiempo", "Paladas", 
@@ -103,10 +133,12 @@ class App:
         ruta_archivo = filedialog.askopenfilename(title="Seleccionar archivo CSV", filetypes=(("CSV files", "*.csv"), ("Todos los archivos", "*.*")))
         if ruta_archivo:
             try:
-                df = pd.read_csv(ruta_archivo)
+                self.df = pd.read_csv(ruta_archivo)  # Actualizar self.df con los datos cargados
                 self.tree.delete(*self.tree.get_children())  # Limpiar tabla
-                for _, row in df.iterrows():
+                for _, row in self.df.iterrows():
                     self.tree.insert("", "end", values=list(row))
+
+                messagebox.showinfo("Éxito", "Archivo importado correctamente. Vaya al Dashboard para ver los gráficos.")
             except Exception as e:
                 messagebox.showerror("Error", f"No se pudo importar el archivo: {e}")
 
